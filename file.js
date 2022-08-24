@@ -20,7 +20,7 @@ export const readTextFile = async (id) => {
   }
 };
 
-export async function* files(dir=root) {
+export async function* files(dir = root) {
   const dirIter = Deno.readDir(dir);
   for await (const { name, isFile, ...meta } of dirIter) {
     if (isFile) {
@@ -28,4 +28,3 @@ export async function* files(dir=root) {
     }
   }
 }
-

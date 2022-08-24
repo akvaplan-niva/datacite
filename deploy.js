@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.152.0/http/server.ts";
-import { readTextFile, root, files } from "./file.js";
+import { files, readTextFile, root } from "./file.js";
 
 const getDOI = async (doi) => {
   const text = await readTextFile(doi);
@@ -11,11 +11,9 @@ const streamDOIs = async () => {
   for await (const { name, isDirectory } of Deno.readDir(root)) {
     if (isDirectory) {
       const dir = name;
-      for await (const {name} of files(`${root}/${dir}`)) {
+      for await (const { name } of files(`${root}/${dir}`)) {
         const text = await Deno.readTextFile(`${root}/${dir}/${name}`);
         dois.push(JSON.parse(text));
-
-
       }
     }
   }
