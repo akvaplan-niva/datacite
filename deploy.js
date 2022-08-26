@@ -1,31 +1,55 @@
-import { serve } from "https://deno.land/std@0.152.0/http/server.ts";
-import { files, readTextFile, root } from "./file.js";
+import { read, slurp } from "./file.js";
+import metafile from "./meta.json" assert { type: "json" };
+import { base } from "./base.js";
 
-const getDOI = async (doi) => {
-  const text = await readTextFile(doi);
-  return new Response(text, { type: "application/json" });
+import { serve } from "std/http/server.ts";
+
+const { updated, meta, links, ids } = metafile;
+
+const data = await slurp({ids});
+
+const headers = [["access-control-allow-origin", "*"]];
+
+const has = (id) => new Set(ids).has(id);
+
+const proxy = async (request) => {
+  const url = new URL(request.url);
+  url.protocol = "https:";
+  url.hostname = new URL(base).hostname;
+  url.port = "443";
+  console.warn("proxy", url.href);
+  return await fetch(url.href, {
+    headers: request.headers,
+    method: request.method,
+    body: request.body,
+  });
 };
 
-const streamDOIs = async () => {
-  const dois = [];
-  for await (const { name, isDirectory } of Deno.readDir(root)) {
-    if (isDirectory) {
-      const dir = name;
-      for await (const { name } of files(`${root}/${dir}`)) {
-        const text = await Deno.readTextFile(`${root}/${dir}/${name}`);
-        dois.push(JSON.parse(text));
-      }
-    }
-  }
-  return Response.json(dois);
+const response = (object) => Response.json(object, { headers });
+
+const doi = async ({ doi }) => response({ data: await read(doi) });
+
+const index = () => response({ updated, meta, links, ids });
+
+const dois = (request) => {
+  const { searchParams } = new URL(request.url);
+  const query = searchParams.get("query");
+  const emptyQuery = !query || query?.length === 0;
+  return emptyQuery ? response({ updated, data, meta, links }) : proxy(request);
 };
 
-serve(async ({ url }) => {
+const routes = new Map([["/", index], ["/dois", dois]]);
+
+serve(async (request) => {
+  const { pathname } = new URL(request.url);
   const pattern = new URLPattern({ pathname: "/dois/:prefix/:suffix" });
-  const { prefix, suffix } = pattern.exec(url)?.pathname?.groups ?? {};
+
+  const { prefix, suffix } = pattern.exec(request.url)?.pathname?.groups ?? {};
   if (prefix && suffix) {
-    return await getDOI(`${prefix}/${suffix}`);
-  } else {
-    return streamDOIs();
+    const id = `${prefix}/${suffix}`;
+    request.doi = id;
+    return has(id) ? await doi(request) : await proxy(request);
+  } else if (routes.has(pathname)) {
+    return routes.get(pathname)(request);
   }
 });
