@@ -17,7 +17,6 @@ const proxy = async (request) => {
   url.protocol = "https:";
   url.hostname = new URL(base).hostname;
   url.port = "443";
-  console.warn("proxy", url.href);
   return await fetch(url.href, {
     headers: request.headers,
     method: request.method,
