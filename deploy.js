@@ -6,7 +6,7 @@ import { serve } from "std/http/server.ts";
 
 const { updated, meta, links, ids } = metafile;
 
-const data = await slurp({ids});
+const data = await slurp({ ids });
 
 const headers = [["access-control-allow-origin", "*"]];
 
