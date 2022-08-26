@@ -4,9 +4,9 @@ import { base } from "./base.js";
 
 import { serve } from "std/http/server.ts";
 
-const data = await slurp();
-
 const { updated, meta, links, ids } = metafile;
+
+const data = await slurp({ids});
 
 const headers = [["access-control-allow-origin", "*"]];
 

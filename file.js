@@ -20,29 +20,24 @@ export const dirFilename = (id) => {
 
 export const path = (id) => dirFilename(id).join("/");
 
-export const read = async (id) => {
-  const mod = await import("./" + path(id), { assert: { type: "json" } });
-  return mod.default;
+export const read = async (doi) => {
+  // const mod = await import("./" + path(id), { assert: { type: "json" } });
+  // return mod.default;
+  return JSON.parse(await Deno.readTextFile(path(doi)));
 };
 
-export const slurp = async () => {
+export const slurp = async ({ids}) => {
   const dois = [];
-  for await (const { name, isDirectory } of readDir(root)) {
-    if (isDirectory) {
-      const dir = name;
-      for await (const { name } of files(`${root}/${dir}`)) {
-        const mod = await import(`./${root}/${dir}/${name}`, {
-          assert: { type: "json" },
-        });
-        dois.push(mod.default);
-      }
-    }
-  }
+  for await (const doi of ids) {
+    dois.push(await read(doi));
+  }   
   return dois;
 };
 
 export const save = async (datacite) => {
   const { id } = datacite;
+  //const { doi} = datacite.attributes.doi;
+  //todo assertEquals
   const [dir, filename] = dirFilename(id);
   await mkdir(dir, { recursive: true });
   await writeTextFile(
