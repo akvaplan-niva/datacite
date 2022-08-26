@@ -1,0 +1,12 @@
+{
+  "importMap": "imports.json",
+
+  "fmt": {
+    "files": {
+      "exclude": ["dois/"]
+    }
+  },
+  "tasks": {
+    "dev": "deno run --watch --allow-net=:8000,api.datacite.org --allow-read=dois deploy.js"
+  }
+}
