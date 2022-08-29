@@ -1,8 +1,9 @@
 import { assertEquals } from "std/testing/asserts.ts";
 
-const { readDir, mkdir, writeTextFile } = Deno;
+const { readDir, mkdir, readTextFile, writeTextFile } = Deno;
 
-const writeJSONFile = (path,object) => writeTextFile(path, JSON.stringify(object) + "\n");
+const writeJSONFile = (path, object) =>
+  writeTextFile(path, JSON.stringify(object) + "\n");
 
 export const root = "dois";
 
@@ -15,7 +16,7 @@ export async function* files(dir) {
 }
 
 export const dirFilename = (id) => {
-  const [prefix, ...suf] = id.split("/");
+  const [prefix, ...suf] = id.toLowerCase().split("/");
   const dir = `${root}/${encodeURIComponent(prefix)}`;
   const filename = encodeURIComponent(suf.join("_") + ".json");
 
@@ -27,7 +28,7 @@ export const path = (id) => dirFilename(id).join("/");
 export const read = async (doi) => {
   // const mod = await import("./" + path(id), { assert: { type: "json" } });
   // return mod.default;
-  return JSON.parse(await Deno.readTextFile(path(doi)));
+  return JSON.parse(await readTextFile(path(doi)));
 };
 
 export const slurp = async ({ ids }) => {
@@ -41,6 +42,7 @@ export const slurp = async ({ ids }) => {
 export const save = async (datacite) => {
   const { id } = datacite;
   assertEquals(id, datacite.attributes.doi);
+  assertEquals(id.toLowerCase(), id);
   const [dir, filename] = dirFilename(id);
   await mkdir(dir, { recursive: true });
   await writeJSONFile(`${dir}/${filename}`, datacite);

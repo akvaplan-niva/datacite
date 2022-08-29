@@ -1,32 +1,25 @@
 import { read, slurp } from "./file.js";
 import metafile from "./meta.json" assert { type: "json" };
-import { base } from "./base.js";
-
+import { proxy } from "./proxy.js";
 import { serve } from "std/http/server.ts";
 
 const { updated, meta, links, ids } = metafile;
 
 const data = await slurp({ ids });
 
-const headers = [["access-control-allow-origin", "*"]];
+const has = (id) => new Set(ids).has(id?.toLowerCase());
 
-const has = (id) => new Set(ids).has(id);
-
-const proxy = async (request) => {
-  const url = new URL(request.url);
-  url.protocol = "https:";
-  url.hostname = new URL(base).hostname;
-  url.port = "443";
-  return await fetch(url.href, {
-    headers: request.headers,
-    method: request.method,
-    body: request.body,
-  });
-};
+const headers = [
+  ["content-type", "application/json; charset=utf-8"],
+  ["access-control-allow-origin", "*"],
+];
 
 const response = (object) => Response.json(object, { headers });
 
-const doi = async ({ doi }) => response({ data: await read(doi) });
+const doi = async (request) =>
+  has(request.doi)
+    ? response({ data: await read(request.doi) })
+    : await proxy(request);
 
 const index = () => response({ updated, meta, links, ids });
 
@@ -37,17 +30,16 @@ const dois = (request) => {
   return emptyQuery ? response({ updated, data, meta, links }) : proxy(request);
 };
 
-const routes = new Map([["/", index], ["/dois", dois]]);
+const routes = new Map([["/", index], ["/meta", index], ["/dois", dois]]);
 
-serve(async (request) => {
+serve((request) => {
   const { pathname } = new URL(request.url);
   const pattern = new URLPattern({ pathname: "/dois/:prefix/:suffix" });
 
   const { prefix, suffix } = pattern.exec(request.url)?.pathname?.groups ?? {};
   if (prefix && suffix) {
-    const id = `${prefix}/${suffix}`;
-    request.doi = id;
-    return has(id) ? await doi(request) : await proxy(request);
+    request.doi = `${prefix}/${suffix}`;
+    return doi(request);
   } else if (routes.has(pathname)) {
     return routes.get(pathname)(request);
   }
